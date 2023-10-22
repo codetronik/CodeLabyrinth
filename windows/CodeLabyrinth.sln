@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.7.34024.191
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CodeLabyrinth", "CodeLabyrinth.vcxproj", "{9D89F94D-84CD-4407-B557-EEF938863E49}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9D89F94D-84CD-4407-B557-EEF938863E49}.Release|x64.ActiveCfg = Release|x64
+		{9D89F94D-84CD-4407-B557-EEF938863E49}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1400383B-A85C-4A59-8594-F3961AD0D112}
+	EndGlobalSection
+EndGlobal

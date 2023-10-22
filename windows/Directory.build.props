@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <LLVMInstallDir>d:\custom-llvm</LLVMInstallDir>
+    <LLVMToolsVersion>17.0.2</LLVMToolsVersion>
+  </PropertyGroup>
+</Project>

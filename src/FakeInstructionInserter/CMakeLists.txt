@@ -1,0 +1,1 @@
+target_sources(CodeLabyrinth PRIVATE FakeInstructionInserter.cpp)
