@@ -50,6 +50,6 @@ Project Setting -> Configuration Properties -> C/C++ -> Command Line -> Addition
 > -fpass-plugin=\CodeLabyrinth.dll
 
 ## Test Environment
--     iOS : C++, Objective C++ / iPhone 12 mini / Xcode 15.0.1
-- Android : C++ / Galaxy Note S20 / Visual Studio 2022
-- Windows : C++ / Visual Studio 2022
+- iOS : C++, Objective C++ / Xcode 15.0.1 / iPhone 12 mini
+- Android : C++ / Visual Studio 2022 / Galaxy Note S20
+- Windows : C++ with Command Line
