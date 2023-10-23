@@ -8,7 +8,10 @@ class FakeInstructionInserter : public PassInfoMixin<FakeInstructionInserter>
 public: 
 	PreservedAnalyses run(Module& M, ModuleAnalysisManager& MAM);
 private:
-	bool Run(Module& M);
+	bool Run();
 	bool InsertAsmIntoPrologue(Function &F);
 	bool InsertAsmIntoBlock(Function &F);
+private:
+	Module* mod;
+	LLVMContext* moduleContext;
 };

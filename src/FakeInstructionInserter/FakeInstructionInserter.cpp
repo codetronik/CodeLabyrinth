@@ -8,15 +8,19 @@
 #include "llvm/ADT/Triple.h"
 #include "Common/LLVMType.hpp"
 #include "Common/Util.hpp"
+#include <random>
+#include <ctime>
 
 using namespace llvm;
 
 PreservedAnalyses FakeInstructionInserter::run(Module& M, ModuleAnalysisManager& FAM)
 {
 	outs() << "[PASS START] OpaqueAsmInjector\n";
-	GetInstance()->init(&M.getContext());
+	this->mod = &M;
+	this->moduleContext = &M.getContext();
+	GetInstance()->init(moduleContext);
 	// check if modified
-	if (Run(M) == true)
+	if (Run() == true)
 	{
 		PreservedAnalyses::none();
 	}
@@ -41,7 +45,6 @@ bool FakeInstructionInserter::InsertAsmIntoBlock(Function &F)
 		StringRef asmString;
 		InlineAsm::AsmDialect ad;
 
-
 		Triple triple = Triple(F.getParent()->getTargetTriple());
 		if (triple.getArch() == Triple::aarch64)
 		{
@@ -65,18 +68,15 @@ bool FakeInstructionInserter::InsertAsmIntoBlock(Function &F)
 
 		}
 		else if (triple.getArch() == Triple::x86_64)
-		{
-			asmString =
-					"push rax\n"
-					"pushfq\n"
-					"mov rax, 0x1\n"
-					"cmp rax, 0x1000\n"
-					"jne label_name\n\n"
-					".long 0xdeadbeef\n"
-					".long 0xbeefcafe\n"
-					"label_name:\n"
-					"popfq\n"
-					"pop rax\n";
+		{	
+			asmString =	"push rax\n"
+						"pushfq\n"
+						"mov rax, 0x1\n"
+						"cmp rax, 0x1000\n"	
+						".short 0x0475\n" // jnz +4
+						".long 0xf0f0f0f0\n" // bad instruction
+						"popfq\n"
+						"pop rax\n";			
 
 			ad = InlineAsm::InlineAsm::AD_Intel;						
 		}
@@ -126,25 +126,25 @@ bool FakeInstructionInserter::InsertAsmIntoPrologue(Function &F)
 	return true;
 }
 
-bool FakeInstructionInserter::Run(Module& M)
+bool FakeInstructionInserter::Run()
 {
 	bool success = false;
 
-	for (Function& F : M)
+	for (Function& F : *mod)
 	{
 		outs() << "Function Name : " << demangle(F.getName().str()) << '\n';
 		if (F.isDeclaration() || F.hasAvailableExternallyLinkage() || F.getInstructionCount() == 0 || F.getLinkage() != GlobalValue::LinkageTypes::ExternalLinkage)
 		{
 			continue;
 		}
-		if (true == hasAnnotation(&F, "noifa"))
+		if (true == hasAnnotation(&F, "nofii"))
 		{
 			continue;
 		}
 
-		success |= InsertAsmIntoPrologue(F); // Binary instructions can be inserted directly into the prologue.
+	//	success |= InsertAsmIntoPrologue(F); // Binary instructions can be inserted directly into the prologue.
 		success |= InsertAsmIntoBlock(F);
 	}
-
+	PrintFunction(*mod);
 	return success;
 }

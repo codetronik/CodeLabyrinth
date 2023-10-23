@@ -5,11 +5,13 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Demangle/Demangle.h"
 #include "Common/LLVMType.hpp"
+#include "Common/Util.hpp"
 
 using namespace llvm;
 
 PreservedAnalyses DynamicCallConverter::run(Module& M, ModuleAnalysisManager& MAM)
 {
+	outs() << "[PASS START] DynamicCallConverter\n";
 	this->mod = &M;
 	this->moduleContext = &M.getContext();
 	GetInstance()->init(moduleContext);
@@ -160,6 +162,10 @@ bool DynamicCallConverter::Run()
 		{
 			continue;
 		}
+		if (true == hasAnnotation(&F, "nodcc"))
+		{
+			continue;
+		}
  
 		for (BasicBlock& BB : F)
 		{
@@ -169,7 +175,7 @@ bool DynamicCallConverter::Run()
 			}
 		}
 	}
-   
+	PrintFunction(*mod);
 	return success;
 }
 

@@ -48,3 +48,19 @@ bool hasAnnotation(Function* f, StringRef str)
 
 	return false;
 }
+
+void PrintFunction(Module &mod)
+{
+	for (Function& F : mod)
+	{
+		outs() << "Function " << demangle(F.getName().str()) << "\n";
+		for (BasicBlock& BB : F)
+		{
+			outs() << "BasicBlock " << BB.getName() << " size : " << BB.size() << "\n";
+			for (Instruction& I : BB)
+			{
+				outs() << "  - Inst : " << I << "\n";
+			}
+		}
+	}
+}
