@@ -5,6 +5,7 @@
 
 - [Fake Instruction Inserter](https://github.com/codetronik/CodeLabyrinth/wiki/%5BPASS%5D-Fake-Instruction-Inserter)
 - [Dynamic Call Converter](https://github.com/codetronik/CodeLabyrinth/wiki/%5BPASS%5D-Dynamic-Call-Converter)
+- [Branch Address Encryptor](https://github.com/codetronik/CodeLabyrinth/wiki/%5BPASS%5D-Branch-Address-Encryptor)
 
 ## Build for iOS  (on Mac)
 

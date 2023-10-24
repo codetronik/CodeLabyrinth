@@ -142,7 +142,7 @@ bool FakeInstructionInserter::Run()
 			continue;
 		}
 
-	//	success |= InsertAsmIntoPrologue(F); // Binary instructions can be inserted directly into the prologue.
+		success |= InsertAsmIntoPrologue(F); // Binary instructions can be inserted directly into the prologue.
 		success |= InsertAsmIntoBlock(F);
 	}
 	PrintFunction(*mod);
