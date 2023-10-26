@@ -1,17 +1,12 @@
 ﻿#include "FakeInstructionInserter.hpp"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/ADT/Triple.h"
 #include "Common/LLVMType.hpp"
 #include "Common/Util.hpp"
-#include <random>
-#include <ctime>
-
-using namespace llvm;
 
 PreservedAnalyses FakeInstructionInserter::run(Module& M, ModuleAnalysisManager& FAM)
 {
@@ -19,10 +14,11 @@ PreservedAnalyses FakeInstructionInserter::run(Module& M, ModuleAnalysisManager&
 	this->mod = &M;
 	this->moduleContext = &M.getContext();
 	GetInstance()->init(moduleContext);
+
 	// check if modified
 	if (Run() == true)
 	{
-		PreservedAnalyses::none();
+		return PreservedAnalyses::none();
 	}
 	
 	return PreservedAnalyses::all();
@@ -90,6 +86,7 @@ bool FakeInstructionInserter::InsertAsmIntoBlock(Function &F)
 	}
 	return true;
 }
+
 bool FakeInstructionInserter::InsertAsmIntoPrologue(Function &F)
 {
 	if (F.hasPrologueData())

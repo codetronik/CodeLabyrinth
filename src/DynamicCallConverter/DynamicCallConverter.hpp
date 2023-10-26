@@ -3,8 +3,6 @@
 
 using namespace llvm;
 
-typedef std::pair<StringRef, StringRef> PairType;
-
 class DynamicCallConverter : public PassInfoMixin<DynamicCallConverter>
 {
 public:
@@ -13,7 +11,7 @@ public:
 private:
 	bool Run();
 	void Init();
-	bool ChangeDirectToIndirect(Instruction& Inst);
+	bool Convert(Instruction& Inst);
 
 private:
 	Module* mod;

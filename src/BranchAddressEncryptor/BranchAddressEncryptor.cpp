@@ -1,19 +1,12 @@
 ﻿#include "BranchAddressEncryptor.hpp"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/InstIterator.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
-#include "llvm/Passes/PassBuilder.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include <random>
-#include <ctime>
 #include "Common/LLVMType.hpp"
 #include "Common/Util.hpp"
-
-using namespace llvm;
 
 PreservedAnalyses BranchAddressEncryptor::run(Module& M, ModuleAnalysisManager& MAM)
 {
@@ -47,14 +40,14 @@ bool BranchAddressEncryptor::Run()
         {
             continue;
         }
-        success |= runOnFunction(F);
+        success |= EncryptAndIndirect(F);
         
     }
     PrintFunction(*mod);
     return success;
 }
 
-bool BranchAddressEncryptor::runOnFunction(Function& Func)
+bool BranchAddressEncryptor::EncryptAndIndirect(Function& Func)
 {
     outs() << " -" << demangle(Func.getName().str()) << "\n";
 

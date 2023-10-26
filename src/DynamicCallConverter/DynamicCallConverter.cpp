@@ -2,12 +2,9 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
 #include "llvm/Demangle/Demangle.h"
 #include "Common/LLVMType.hpp"
 #include "Common/Util.hpp"
-
-using namespace llvm;
 
 PreservedAnalyses DynamicCallConverter::run(Module& M, ModuleAnalysisManager& MAM)
 {
@@ -20,9 +17,38 @@ PreservedAnalyses DynamicCallConverter::run(Module& M, ModuleAnalysisManager& MA
 	// check if modified
 	if (Run() == true)
 	{
-		PreservedAnalyses::none();
+		return PreservedAnalyses::none();
 	}
 	return PreservedAnalyses::all();
+}
+
+bool DynamicCallConverter::Run()
+{
+	bool success = false;
+
+	for (Function& F : *mod)
+	{
+		outs() << "Function Name : " << demangle(F.getName().str()) << '\n';
+
+		if (F.isDeclaration() || F.hasAvailableExternallyLinkage())
+		{
+			continue;
+		}
+		if (true == hasAnnotation(&F, "nodcc"))
+		{
+			continue;
+		}
+
+		for (BasicBlock& BB : F)
+		{
+			for (Instruction& Inst : BB)
+			{
+				success |= Convert(Inst);
+			}
+		}
+	}
+	PrintFunction(*mod);
+	return success;
 }
 
 void DynamicCallConverter::Init()
@@ -61,7 +87,7 @@ void DynamicCallConverter::Init()
 	}
 }
   
-bool DynamicCallConverter::ChangeDirectToIndirect(Instruction& Inst)
+bool DynamicCallConverter::Convert(Instruction& Inst)
 {
 	if (false == isa<CallInst>(&Inst))
 	{
@@ -150,32 +176,3 @@ bool DynamicCallConverter::ChangeDirectToIndirect(Instruction& Inst)
 
 	return true;
 }
-bool DynamicCallConverter::Run()
-{
-	bool success = false;
-
-	for (Function& F : *mod)
-	{
-		outs() << "Function Name : " << demangle(F.getName().str()) << '\n';
-
-		if (F.isDeclaration() || F.hasAvailableExternallyLinkage())
-		{
-			continue;
-		}
-		if (true == hasAnnotation(&F, "nodcc"))
-		{
-			continue;
-		}
- 
-		for (BasicBlock& BB : F)
-		{
-			for (Instruction& Inst : BB)
-			{
-				success |= ChangeDirectToIndirect(Inst);
-			}
-		}
-	}
-	PrintFunction(*mod);
-	return success;
-}
-

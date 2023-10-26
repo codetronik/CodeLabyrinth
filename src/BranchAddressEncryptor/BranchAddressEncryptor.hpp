@@ -1,6 +1,5 @@
 #pragma once
-#include <llvm/IR/PassManager.h>
-#include <llvm/IR/Constants.h>
+#include "llvm/IR/PassManager.h"
 
 using namespace llvm;
 
@@ -8,9 +7,11 @@ class BranchAddressEncryptor : public PassInfoMixin<BranchAddressEncryptor>
 {
 public:
 	PreservedAnalyses run(Module& M, ModuleAnalysisManager& MAM);
-public:
+
+private:
 	bool Run();
-	bool runOnFunction(Function& Func);
+	bool EncryptAndIndirect(Function& Func);
+
 private:
 	Module* mod;
 	LLVMContext* moduleContext;

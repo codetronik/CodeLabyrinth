@@ -1,4 +1,8 @@
 #include "Util.hpp"
+//#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Demangle/Demangle.h"
+#include "llvm/IR/IRBuilder.h"
+//#include "llvm/IR/Instructions.h"
 
 bool hasAnnotation(Function* f, StringRef str)
 {
