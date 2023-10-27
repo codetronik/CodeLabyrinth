@@ -5,6 +5,7 @@
 #include "FakeInstructionInserter/FakeInstructionInserter.hpp"
 #include "DynamicCallConverter/DynamicCallConverter.hpp"
 #include "BranchAddressEncryptor/BranchAddressEncryptor.hpp"
+#include "StringEncryptor/StringEncryptor.hpp"
 
 using namespace llvm;
 
@@ -19,9 +20,10 @@ extern "C" PassPluginLibraryInfo LLVM_ATTRIBUTE_WEAK llvmGetPassPluginInfo()
 				[](ModulePassManager &MPM, OptimizationLevel level)
 				{
 					// todo : Need to change to cli option
-					MPM.addPass(FakeInstructionInserter());
-					MPM.addPass(DynamicCallConverter());
+					MPM.addPass(FakeInstructionInserter());				
 					MPM.addPass(BranchAddressEncryptor());
+					MPM.addPass(DynamicCallConverter());
+					MPM.addPass(StringEncryptor());
 				}
 			);
 			PB.registerScalarOptimizerLateEPCallback(

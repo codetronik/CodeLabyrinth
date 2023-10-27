@@ -10,7 +10,7 @@
 
 PreservedAnalyses FakeInstructionInserter::run(Module& M, ModuleAnalysisManager& FAM)
 {
-	outs() << "[PASS START] OpaqueAsmInjector\n";
+	outs() << "[PASS START] FakeInstructionInserter\n";
 	this->mod = &M;
 	this->moduleContext = &M.getContext();
 	GetInstance()->init(moduleContext);

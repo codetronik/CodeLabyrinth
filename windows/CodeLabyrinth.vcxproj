@@ -54,7 +54,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>LLVMCore.lib;LLVMSupport.lib;LLVMBinaryFormat.lib;LLVMRemarks.lib;LLVMBitstreamReader.lib;LLVMTargetParser.lib;LLVMDemangle.lib;LLVMTransformUtils.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>LLVMCore.lib;LLVMSupport.lib;LLVMBinaryFormat.lib;LLVMRemarks.lib;LLVMBitstreamReader.lib;LLVMTargetParser.lib;LLVMDemangle.lib;LLVMTransformUtils.lib;LLVMProfileData.lib;LLVMAnalysis.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -63,6 +63,7 @@
     <ClInclude Include="..\src\FakeInstructionInserter\FakeInstructionInserter.hpp" />
     <ClInclude Include="..\src\Common\LLVMType.hpp" />
     <ClInclude Include="..\src\DynamicCallConverter\DynamicCallConverter.hpp" />
+    <ClInclude Include="..\src\StringEncryptor\StringEncryptor.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\BranchAddressEncryptor\BranchAddressEncryptor.cpp" />
@@ -70,6 +71,7 @@
     <ClCompile Include="..\src\FakeInstructionInserter\FakeInstructionInserter.cpp" />
     <ClCompile Include="..\src\RegisterPass.cpp" />
     <ClCompile Include="..\src\DynamicCallConverter\DynamicCallConverter.cpp" />
+    <ClCompile Include="..\src\StringEncryptor\StringEncryptor.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
