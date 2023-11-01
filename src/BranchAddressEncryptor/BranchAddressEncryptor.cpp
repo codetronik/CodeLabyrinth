@@ -1,6 +1,7 @@
 ﻿#include "BranchAddressEncryptor.hpp"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -14,7 +15,7 @@ PreservedAnalyses BranchAddressEncryptor::run(Module& M, ModuleAnalysisManager& 
     this->mod = &M;
     this->moduleContext = &M.getContext();
     GetInstance()->init(moduleContext);
-
+   
     // check if modified
     if (Run() == true)
     {
@@ -51,24 +52,54 @@ bool BranchAddressEncryptor::EncryptAndIndirect(Function& Func)
 {
     outs() << " -" << demangle(Func.getName().str()) << "\n";
 
-    std::vector<BranchInst*> branchInsts;
+    std::vector<BranchInst*> conditionBrInsts;
+    std::vector<BranchInst*> unconditionBrInsts;
+
     for (Instruction& Inst : instructions(Func))
     {
         if (isa<BranchInst>(&Inst))
         {
-            branchInsts.push_back(dyn_cast<BranchInst>(&Inst));
+            BranchInst* br = dyn_cast<BranchInst>(&Inst);
+
+            if (true == br->isConditional())
+            {
+                conditionBrInsts.push_back(br);
+            }
+            else
+            {
+                unconditionBrInsts.push_back(br);
+            }           
         }
-    }
-
-    Value* zero = ConstantInt::get(Int64Ty, 0);
-
-    for (BranchInst* branchInst : branchInsts)
+    }    
+        
+    // 비조건 브랜치를 조건 브랜치처럼 난독화하면 최적화 되어 버린다.
+    // rand()와 비교문을 추가하여 강제로 조건 브랜치로 변경하면 최적화 대상에서 제외된다.
+    for (BranchInst* branchInst : unconditionBrInsts)
     {
-        // goto 형식의 br은 전부 최적화 되어버리므로 난독화 대상에서 제외한다.
-        if (!branchInst->isConditional())
-        {
-            continue;
-        }
+        BasicBlock* trueBlock = branchInst->getSuccessor(0);
+
+        IRBuilder<>* branchInstBuilder = new IRBuilder<>(branchInst);
+        FunctionCallee randFunc = mod->getOrInsertFunction("rand", Int32Ty);
+        CallInst* callRand = branchInstBuilder->CreateCall(randFunc, {});
+        // 항상 false가 되는 구문을 작성해야함
+        // if (rand() > -1)
+        Value* cmpResult = branchInstBuilder->CreateICmpSGT(callRand, ConstantInt::get(Int32Ty, -1));
+
+        // 최적화를 피하기 위해 추가함. 실행되면 안되는 코드
+        BasicBlock* falseBlock = BasicBlock::Create(*moduleContext, "falseBlock", &Func);
+        IRBuilder<> builder(falseBlock);
+        builder.CreateBr(falseBlock);
+
+        BranchInst* bi = BranchInst::Create(trueBlock, falseBlock, cmpResult);
+        llvm::ReplaceInstWithInst(branchInst, bi);
+       
+        conditionBrInsts.push_back(bi);
+    }
+    
+    
+    Value* zero = ConstantInt::get(Int64Ty, 0);
+    for (BranchInst* branchInst : conditionBrInsts)
+    {   
         outs() << "BI : " << *branchInst << "\n";
 
         IRBuilder<>* branchInstBuilder = new IRBuilder<>(branchInst);
@@ -98,7 +129,7 @@ bool BranchAddressEncryptor::EncryptAndIndirect(Function& Func)
 
         // 최적화를 피하기 위해 global section을 사용한다.
         GlobalVariable* trueFalseGV = new GlobalVariable(*mod, arrayType, false, GlobalValue::LinkageTypes::PrivateLinkage, trueFalseArray, "EncBlockTable");
-
+        
         appendToCompilerUsed(*Func.getParent(), { trueFalseGV });
 
         // 어디로 분기할지 동적으로 구하는 코드
@@ -119,7 +150,7 @@ bool BranchAddressEncryptor::EncryptAndIndirect(Function& Func)
         IndirectBrInst* indirectBr = branchInstBuilder->CreateIndirectBr(realBranchAddr, trueFalseBlocks.size());
         indirectBr->addDestination(falseBlock);
         indirectBr->addDestination(trueBlock);
-
+        
         // 원본 명령어는 삭제
         branchInst->eraseFromParent();
     }
