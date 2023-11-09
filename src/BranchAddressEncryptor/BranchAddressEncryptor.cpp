@@ -116,8 +116,10 @@ bool BranchAddressEncryptor::EncryptAndIndirect(Function& Func)
 
         // 분기 주소 + 오프셋
         // 최적화를 피할 수 있는 유일한 주소 연산 방법 (이라고 믿고 있음)        
-        Constant* trueBlockRealEncAddr = ConstantExpr::getGetElementPtr(Int64Ty, BlockAddress::get(trueBlock), keyOffset);
-        Constant* falseBlockRealEncAddr = ConstantExpr::getGetElementPtr(Int64Ty, BlockAddress::get(falseBlock), keyOffset);
+        auto trueBlockPtr = ConstantExpr::getGetElementPtr(Int64Ty, BlockAddress::get(trueBlock), keyOffset);
+        auto trueBlockRealEncAddr = ConstantExpr::getPtrToInt(trueBlockPtr, Int64Ty);
+        auto falseBlockPtr = ConstantExpr::getGetElementPtr(Int64Ty, BlockAddress::get(falseBlock), keyOffset);
+        auto falseBlockRealEncAddr = ConstantExpr::getPtrToInt(falseBlockPtr, Int64Ty);
 
         // 순서는 false, true 순 (고정)
         std::vector<Constant*> trueFalseBlocks;
@@ -129,7 +131,7 @@ bool BranchAddressEncryptor::EncryptAndIndirect(Function& Func)
 
         // 최적화를 피하기 위해 global section을 사용한다.
         GlobalVariable* trueFalseGV = new GlobalVariable(*mod, arrayType, false, GlobalValue::LinkageTypes::PrivateLinkage, trueFalseArray, "EncBlockTable");
-        
+
         appendToCompilerUsed(*Func.getParent(), { trueFalseGV });
 
         // 어디로 분기할지 동적으로 구하는 코드
@@ -141,7 +143,7 @@ bool BranchAddressEncryptor::EncryptAndIndirect(Function& Func)
         // true or false 주소를 담고 있는 메모리의 주소를 가져옴
         Value* branchGV = branchInstBuilder->CreateGEP(arrayType, trueFalseGV, { zero, index });
         // encBranchAddrPtr =  *branchGV
-        LoadInst* encBranchAddrPtr = branchInstBuilder->CreateLoad(Int64Ty, branchGV);
+        LoadInst* encBranchAddrPtr = branchInstBuilder->CreateLoad(Int64PtrTy, branchGV);
         // 더했던 만큼 뺌
         Value* offset = branchInstBuilder->CreateSub(zero, keyOffset);
 
