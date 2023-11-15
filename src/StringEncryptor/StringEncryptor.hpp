@@ -17,16 +17,18 @@ private:
 	bool MarkAllStrings(Function& function);
 	void EncryptMarkStrings();
 	bool IsStringGV(GlobalVariable* gv, Value* v);
+	Instruction* GetRetInstruction(Function *function);
 
 private:
 	Module* mod;
 	LLVMContext* moduleContext;
-
+	
+	std::map<AllocaInst*, int> allocSize;
 	using PairList = std::map<GlobalVariable*, AllocaInst*>;
-	using BasicBlockToPairsMap = std::map<BasicBlock*, PairList>;
-	BasicBlockToPairsMap blockPairMap;
+	using FunctionToPairsMap = std::map<Function*, PairList>;
+	FunctionToPairsMap functionPairMap;
 
 	using InstructionList = std::vector<Instruction*>;
-	using BasicBlockToInstructionMap = std::map<BasicBlock*, InstructionList>;
-	BasicBlockToInstructionMap blockInstMap;
+	using FunctionToInstructionMap = std::map<Function*, InstructionList>;
+	FunctionToInstructionMap functionInstMap;
 };

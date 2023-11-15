@@ -1,6 +1,7 @@
 ﻿#include "StringEncryptor.hpp"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Demangle/Demangle.h"
@@ -14,6 +15,7 @@ PreservedAnalyses StringEncryptor::run(Module& M, ModuleAnalysisManager& MAM)
 	this->mod = &M;
 	this->moduleContext = &M.getContext();
 	GetInstance()->init(moduleContext);
+	PrintFunction(*mod);
 
 	// check if modified
 	if (Run() == true)
@@ -80,6 +82,11 @@ bool StringEncryptor::IsStringGV(GlobalVariable* gv, Value* v)
 		outs() << "[INFO] Unsupport GV 2 " << v->getName() << " .. " << gv->getSection() << "\n";
 		return false;
 	}
+	if (gv->getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage) // 전역 변수
+	{
+		outs() << "[INFO] Unsupport GV 3 " << v->getName() << " .. " << gv->getSection() << "\n";
+		return false;
+	}
 
 	return true;
 }
@@ -108,12 +115,10 @@ bool StringEncryptor::MarkAllStrings(Function& function)
 					if (true == IsStringGV(gv, v))
 					{
 						outs() << "\t\t\tInst : " << &inst << " GV value " << gv << " : " << v->getName() << " / " << gv->getSection() << "\n";
-						Function* f = block.getParent();
-						outs() << "\t\t\t\tparent Function Name : " << gv->getParent() << "..." << demangle(f->getName().str()) << '\n';
 
 						// mark string
-						blockPairMap[&block].insert({ gv, nullptr });
-						blockInstMap[&block].push_back(&inst);
+						functionPairMap[&function].insert({ gv,nullptr });
+						functionInstMap[&function].push_back(&inst);
 						mark = true;
 					}
 				}
@@ -123,29 +128,38 @@ bool StringEncryptor::MarkAllStrings(Function& function)
 	return mark;
 }
 
+Instruction* StringEncryptor::GetRetInstruction(Function* function)
+{
+	for (Instruction& inst : instructions(function))
+	{
+		if (isa<ReturnInst>(&inst))
+		{
+			return &inst;
+		}
+	}
+	return nullptr;
+}
+
 void StringEncryptor::EncryptMarkStrings()
 {
 	std::random_device rd;
 	std::mt19937 gen(rd());
 	std::uniform_int_distribution<> dist(0x0, 0xFF);
 
-	for (auto& [block, pairList] : blockPairMap)
+	for (auto& [function, pairList] : functionPairMap)
 	{
-		// BB 블록 3분할 후 암/복호화 1블록씩 추가
-		// A(첫 명령어) -> 복호화 -> B(몸통) -> 암호화 -> C(마지막 명령어)
-		BasicBlock* A = block;
+		// A(첫 명령어) -> 복호화 -> B(몸통) 
+		BasicBlock& firstBB = function->getEntryBlock();
+
+		BasicBlock* A = &firstBB;
 		BasicBlock* B = A->splitBasicBlock(A->getFirstNonPHIOrDbgOrLifetime());
-		BasicBlock* C = B->splitBasicBlock(B->getTerminator());
+
 		// B 앞에 복호화 블록을 생성
 		BasicBlock* decryptBlock = BasicBlock::Create(*moduleContext, "DecryptBlock", A->getParent(), B);
-		// C 앞에 암호화 블록을 생성
-		BasicBlock* freeBlock = BasicBlock::Create(*moduleContext, "FreeBlock", A->getParent(), C);
 		// A 블록에서 복호화 블록으로 점프
 		llvm::ReplaceInstWithInst(A->getTerminator(), BranchInst::Create(decryptBlock));
-		// B 블록에서 암호화 블록으로 점프
-		llvm::ReplaceInstWithInst(B->getTerminator(), BranchInst::Create(freeBlock));
+
 		IRBuilder<> builderDecryptBlock(decryptBlock);
-		IRBuilder<> builderFreeBlock(freeBlock);
 
 		// 각각의 GlobalVariable에 새로운 GlobalVariable 생성후 연결
 		for (auto& [originalGV, mallocAddress] : pairList)
@@ -184,7 +198,7 @@ void StringEncryptor::EncryptMarkStrings()
 			// malloc 명령어 생성
 			Instruction* mallocInst = CallInst::CreateMalloc(
 				decryptBlock,
-				Type::getInt64Ty(*moduleContext),
+				Int64Ty,
 				encryptConst->getType(),
 				ConstantExpr::getSizeOf(encryptConst->getType()),
 				nullptr,
@@ -194,44 +208,80 @@ void StringEncryptor::EncryptMarkStrings()
 			Value* allocatedMemory = builderDecryptBlock.Insert(mallocInst);
 
 			// 로컬 변수에 저장
-			AllocaInst* ai = builderDecryptBlock.CreateAlloca(Type::getInt64Ty(*moduleContext));
+			AllocaInst* ai = builderDecryptBlock.CreateAlloca(Int64Ty);
 			builderDecryptBlock.CreateStore(allocatedMemory, ai, true);
 			mallocAddress = ai;
+			allocSize[mallocAddress] = strSize;
+			ArrayType* strType = ArrayType::get(Int8Ty, strSize);
 
-			ArrayType* strType = ArrayType::get(Type::getInt8Ty(*moduleContext), strSize);
-
-			for (unsigned j = 0; j < strSize; j++)
+			for (int j = 0; j < strSize; j++)
 			{
 				// 복호화 결과를 malloc 메모리에 저장
 				Value* encValue = builderDecryptBlock.CreateGEP(strType, encryptGV, { builderDecryptBlock.getInt32(0),  builderDecryptBlock.getInt32(j) });
 				Value* decValue = builderDecryptBlock.CreateGEP(strType, allocatedMemory, { builderDecryptBlock.getInt32(0),  builderDecryptBlock.getInt32(j) });
 
 				// encryptGV에서 한글자 로딩
-				LoadInst* loadOneByte = builderDecryptBlock.CreateLoad(builderDecryptBlock.getInt8Ty(), encValue, "encryptInst");
+				LoadInst* loadOneByte = builderDecryptBlock.CreateLoad(Int8Ty, encValue, "encryptInst");
 				loadOneByte->setVolatile(true);
 				// key와 loadOneByte를 xor
 				Value* xorValue = builderDecryptBlock.CreateXor(loadOneByte, keyArray[j]);
 				// 복호화 메모리에 저장
 				builderDecryptBlock.CreateStore(xorValue, decValue, true);
+			}
+		}
+		builderDecryptBlock.CreateBr(B);
+	}
 
-				// free 하기 전에 메모리를 랜덤 값으로..
-				Constant* wipeConstant = ConstantInt::get(Type::getInt8Ty(*moduleContext), dist(gen));
+	// free 삽입	
+	for (auto& [function, pairList] : functionPairMap)
+	{
+		Instruction* retInst = GetRetInstruction(function);
+
+		// ret 명령어가 없는 경우. 함수안에 while(true)가 있을 가능성이 높음
+		if (retInst == nullptr)
+		{
+			errs() << "Function Name : " << demangle(function->getName().str()) << "..." << function->getLinkage() << '\n';
+		}
+
+		BasicBlock* BB = retInst->getParent();
+		BasicBlock* A = BB;
+		BasicBlock* B = A->splitBasicBlock(retInst);
+		// B 앞에 복호화 블록을 생성
+		BasicBlock* freeBlock = BasicBlock::Create(*moduleContext, "FreeBlock", A->getParent(), B);
+		// A 블록에서 free 블록으로 점프
+		llvm::ReplaceInstWithInst(A->getTerminator(), BranchInst::Create(freeBlock));
+
+		IRBuilder<> builderFreeBlock(freeBlock);
+
+		for (const auto& pair : pairList)
+		{		
+			AllocaInst* mallocAddress = pair.second;
+
+			LoadInst* li = builderFreeBlock.CreateLoad(Int64PtrTy, mallocAddress);
+			li->setVolatile(true);
+
+			// free 하기 전에 메모리를 0으로..
+			Constant* wipeConstant = ConstantInt::get(Int8Ty, 0);
+			int strSize = allocSize[mallocAddress];
+			ArrayType* strType = ArrayType::get(Int8Ty, strSize);
+			for (int i = 0; i < strSize; i++)
+			{
+				Value* decValue = builderFreeBlock.CreateGEP(strType, li, { builderFreeBlock.getInt32(0),  builderFreeBlock.getInt32(i) });
 				builderFreeBlock.CreateStore(wipeConstant, decValue, true);
 			}
+
 			// free 명령어 생성
-			Instruction* freeInst = CallInst::CreateFree(allocatedMemory, freeBlock);
-			// free 실행
+			Instruction* freeInst = CallInst::CreateFree(li, freeBlock);
 			builderFreeBlock.Insert(freeInst);
 
 		}
-		builderDecryptBlock.CreateBr(B);
-		builderFreeBlock.CreateBr(C);
+		builderFreeBlock.CreateBr(B);
 	}
 
 	// GV 교체
-	for (const auto& [block, instructions] : blockInstMap)
+	for (const auto& [function, instructions] : functionInstMap)
 	{
-		PairList gvPair = blockPairMap[block];
+		PairList gvPair = functionPairMap[function];
 
 		for (const auto& pair : gvPair)
 		{
@@ -241,8 +291,9 @@ void StringEncryptor::EncryptMarkStrings()
 			for (const auto& inst : instructions)
 			{
 				IRBuilder<>* branchInstBuilder = new IRBuilder<>(inst);
-				LoadInst* li = branchInstBuilder->CreateLoad(Type::getInt64Ty(*moduleContext), mallocAddress);
+				LoadInst* li = branchInstBuilder->CreateLoad(Int64PtrTy, mallocAddress);
 				li->setVolatile(true);
+				//li->setAlignment(Align(4));
 
 				// GV <-> mallocAddress
 				// 명령어에서 문자열 변수 교체
@@ -251,26 +302,6 @@ void StringEncryptor::EncryptMarkStrings()
 				// -> %4 = call i32 (ptr, ...) @wprintf(ptr noundef @-EncryptString), !dbg !11
 				inst->replaceUsesOfWith(originalGV, li);
 			}
-		}
-	}
-	// 중복 없이 원본 GlobalVariable 가져오기
-	std::set<GlobalVariable*> uniqueGVs;
-	for (const auto& blockPair : blockPairMap)
-	{
-		for (const auto& gvPair : blockPair.second)
-		{
-			uniqueGVs.insert(gvPair.first);
-		}
-	}
-
-	// wiping GV
-	for (const auto& originalGV : uniqueGVs)
-	{
-		originalGV->removeDeadConstantUsers();
-		if (originalGV->getNumUses() == 0)
-		{
-			originalGV->dropAllReferences();
-			originalGV->eraseFromParent();
 		}
 	}
 }
