@@ -41,6 +41,15 @@ bool StringEncryptor::Run()
 		{
 			continue;
 		}
+		// ret 명령어가 없는 case
+		// 함수안에 while(true)가 있을 가능성이 높음.
+		// 이 로직은 ret 앞에 free()를 삽입하는 구조이므로 pass함.
+		Instruction* retInst = GetRetInstruction(function);
+		if (retInst == nullptr)
+		{
+			outs() << "==> [SKIP] No ret instruction found.\n";
+			continue;
+		}
 
 		success |= MarkAllStrings(function);
 
@@ -235,13 +244,8 @@ void StringEncryptor::EncryptMarkStrings()
 	// free 삽입	
 	for (auto& [function, pairList] : functionPairMap)
 	{
+		// Run()에서 ret 명령어의 존재를 체크했으므로 무조건 존재한다고 가정함
 		Instruction* retInst = GetRetInstruction(function);
-
-		// ret 명령어가 없는 경우. 함수안에 while(true)가 있을 가능성이 높음
-		if (retInst == nullptr)
-		{
-			errs() << "Function Name : " << demangle(function->getName().str()) << "..." << function->getLinkage() << '\n';
-		}
 
 		BasicBlock* BB = retInst->getParent();
 		BasicBlock* A = BB;
