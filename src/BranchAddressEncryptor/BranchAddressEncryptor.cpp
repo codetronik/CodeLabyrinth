@@ -1,4 +1,5 @@
 ﻿#include "BranchAddressEncryptor.hpp"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -15,7 +16,7 @@ PreservedAnalyses BranchAddressEncryptor::run(Module& M, ModuleAnalysisManager& 
     this->mod = &M;
     this->moduleContext = &M.getContext();
     GetInstance()->init(moduleContext);
-   
+
     // check if modified
     if (Run() == true)
     {
@@ -42,7 +43,7 @@ bool BranchAddressEncryptor::Run()
             continue;
         }
         success |= EncryptAndIndirect(F);
-        
+
     }
     PrintFunction(*mod);
     return success;
@@ -68,10 +69,10 @@ bool BranchAddressEncryptor::EncryptAndIndirect(Function& Func)
             else
             {
                 unconditionBrInsts.push_back(br);
-            }           
+            }
         }
-    }    
-        
+    }
+
     // 비조건 브랜치를 조건 브랜치처럼 난독화하면 최적화 되어 버린다.
     // rand()와 비교문을 추가하여 강제로 조건 브랜치로 변경하면 최적화 대상에서 제외된다.
     for (BranchInst* branchInst : unconditionBrInsts)
@@ -92,14 +93,14 @@ bool BranchAddressEncryptor::EncryptAndIndirect(Function& Func)
 
         BranchInst* bi = BranchInst::Create(trueBlock, falseBlock, cmpResult);
         llvm::ReplaceInstWithInst(branchInst, bi);
-       
+
         conditionBrInsts.push_back(bi);
     }
-    
-    
+
+
     Value* zero = ConstantInt::get(Int64Ty, 0);
     for (BranchInst* branchInst : conditionBrInsts)
-    {   
+    {
         outs() << "BI : " << *branchInst << "\n";
 
         IRBuilder<>* branchInstBuilder = new IRBuilder<>(branchInst);
@@ -107,26 +108,37 @@ bool BranchAddressEncryptor::EncryptAndIndirect(Function& Func)
         std::random_device rd;
         std::mt19937 gen(rd());
         std::uniform_int_distribution<> dist(0x100000, INT32_MAX);
- 
+
         // type은 정수 타입 (Int32Ty일 경우 0x1이면 메모리에서 0x8임)
         ConstantInt* keyOffset = ConstantInt::get(Int64Ty, dist(gen));
 
         BasicBlock* trueBlock = branchInst->getSuccessor(0);
         BasicBlock* falseBlock = branchInst->getSuccessor(1);
+        Triple triple = Triple(mod->getTargetTriple());
 
         // 분기 주소 + 오프셋
-        // 최적화를 피할 수 있는 유일한 주소 연산 방법 (이라고 믿고 있음)        
-        auto trueBlockPtr = ConstantExpr::getGetElementPtr(Int64Ty, BlockAddress::get(trueBlock), keyOffset);
-        auto trueBlockRealEncAddr = ConstantExpr::getPtrToInt(trueBlockPtr, Int64Ty);
-        auto falseBlockPtr = ConstantExpr::getGetElementPtr(Int64Ty, BlockAddress::get(falseBlock), keyOffset);
-        auto falseBlockRealEncAddr = ConstantExpr::getPtrToInt(falseBlockPtr, Int64Ty);
+        // 최적화를 피할 수 있는 유일한 주소 연산 방법 (이라고 믿고 있음)
+        Type* dynamicTy;
+        if (triple.isArch64Bit())
+        {
+            dynamicTy = Int64Ty;
+        }
+        else
+        {
+            dynamicTy = Int32Ty;
+        }
+
+        auto trueBlockPtr = ConstantExpr::getGetElementPtr(dynamicTy, BlockAddress::get(trueBlock), keyOffset);
+        auto trueBlockRealEncAddr = ConstantExpr::getPtrToInt(trueBlockPtr, dynamicTy);
+        auto falseBlockPtr = ConstantExpr::getGetElementPtr(dynamicTy, BlockAddress::get(falseBlock), keyOffset);
+        auto falseBlockRealEncAddr = ConstantExpr::getPtrToInt(falseBlockPtr, dynamicTy);
 
         // 순서는 false, true 순 (고정)
         std::vector<Constant*> trueFalseBlocks;
         trueFalseBlocks.push_back(falseBlockRealEncAddr);
         trueFalseBlocks.push_back(trueBlockRealEncAddr);
 
-        ArrayType* arrayType = ArrayType::get(Int64Ty, trueFalseBlocks.size());
+        ArrayType* arrayType = ArrayType::get(dynamicTy, trueFalseBlocks.size());
         Constant* trueFalseArray = ConstantArray::get(arrayType, ArrayRef<Constant*>(trueFalseBlocks));
 
         // 최적화를 피하기 위해 global section을 사용한다.
@@ -152,7 +164,7 @@ bool BranchAddressEncryptor::EncryptAndIndirect(Function& Func)
         IndirectBrInst* indirectBr = branchInstBuilder->CreateIndirectBr(realBranchAddr, trueFalseBlocks.size());
         indirectBr->addDestination(falseBlock);
         indirectBr->addDestination(trueBlock);
-        
+
         // 원본 명령어는 삭제
         branchInst->eraseFromParent();
     }
