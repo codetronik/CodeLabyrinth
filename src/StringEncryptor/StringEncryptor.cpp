@@ -44,7 +44,7 @@ bool StringEncryptor::Run()
 		// ret 명령어가 없는 case
 		// 함수안에 while(true)가 있을 가능성이 높음.
 		// 이 로직은 ret 앞에 free()를 삽입하는 구조이므로 pass함.
-		Instruction* retInst = GetRetInstruction(function);
+		Instruction* retInst = GetRetInstruction(&function);
 		if (retInst == nullptr)
 		{
 			outs() << "==> [SKIP] No ret instruction found.\n";
