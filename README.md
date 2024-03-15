@@ -12,10 +12,10 @@
 
 ### Compile Clang
 Download the same version as clang of your Xcode. Check your version [here](https://en.wikipedia.org/wiki/Xcode)<br>
-Xcode 15.0.1 uses clang-1500.0.40.1 and is included in swift-5.9 branch.
+Xcode 15.3 uses clang-1500.3.9.4 and is included in swift-5.10 branch.
 
 ```sh
-$ git clone -b swift-5.9-RELEASE --depth 1 --single-branch https://github.com/apple/llvm-project.git
+$ git clone -b swift-5.10-RELEASE --depth 1 --single-branch https://github.com/apple/llvm-project.git
 $ cd llvm-project
 $ cmake -S llvm -B Release -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_NEW_PASS_MANAGER=ON -DCMAKE_OSX_ARCHITECTURES=arm64 -DLLVM_ENABLE_PROJECTS="clang" 
 $ cd Release
