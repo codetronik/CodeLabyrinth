@@ -11,22 +11,13 @@
 ## Build for iOS  (on Mac)
 
 ### Compile Clang
-Download the same version as clang of your Xcode. Check your version [here](https://en.wikipedia.org/wiki/Xcode)<br>
-Xcode 15.3 uses clang-1500.3.9.4 and is included in swift-5.10 branch.
-
-```sh
-$ git clone -b swift-5.10-RELEASE --depth 1 --single-branch https://github.com/apple/llvm-project.git
-$ cd llvm-project
-$ cmake -S llvm -B Release -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_NEW_PASS_MANAGER=ON -DCMAKE_OSX_ARCHITECTURES=arm64 -DLLVM_ENABLE_PROJECTS="clang" 
-$ cd Release
-$ make -j16
-```
+[How to build clang and swift‐frontend (on Mac M2)](https://github.com/codetronik/CodeLabyrinth/wiki/How-to-build-clang-and-swift%E2%80%90frontend-(on-Mac-M2))
 
 ### Compile Pass Plugin
 ```sh
 $ git clone https://github.com/codetronik/CodeLabyrinth
 $ cd CodeLabyrinth
-$ cmake -B Release -DLLVM_DIR=/YOURPATH/llvm-project/Release/lib/cmake -DCMAKE_OSX_ARCHITECTURES=arm64
+$ cmake -B Release -DLLVM_DIR=/SWIFT_CLONE_PATH/build/buildbot_osx/llvm-macosx-arm64/lib/cmake -DCMAKE_OSX_ARCHITECTURES=arm64
 $ cd Release
 $ make -j16
 ```
