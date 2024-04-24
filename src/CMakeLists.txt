@@ -22,7 +22,7 @@ add_library(CodeLabyrinth SHARED RegisterPass.cpp)
 target_include_directories(CodeLabyrinth PRIVATE ${CMAKE_SOURCE_DIR})
 target_include_directories(CodeLabyrinth PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
-if(UNIX AND APPLE)
+if(WIN32 OR APPLE)
   llvm_map_components_to_libnames(LLVM_LIBRARIES Core Support TransformUtils)
   target_link_libraries(CodeLabyrinth PRIVATE ${LLVM_LIBRARIES})
 endif()
