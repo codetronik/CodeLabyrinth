@@ -33,14 +33,11 @@ bool StringEncryptor::Run()
 	{
 		outs() << "Function Name : " << demangle(function.getName().str()) << " ... " << function.getLinkage() << "...." << function.isSpeculatable() << '\n';
 
-		if (function.isDeclaration() || function.hasAvailableExternallyLinkage() || function.getInstructionCount() == 0 || function.getLinkage() != GlobalValue::LinkageTypes::ExternalLinkage)
+		if (false == hasAnnotation(&function, "string_encrypt"))
 		{
 			continue;
 		}
-		if (true == hasAnnotation(&function, "nose"))
-		{
-			continue;
-		}
+
 		// ret 명령어가 없는 case
 		// 함수안에 while(true)가 있을 가능성이 높음.
 		// 이 로직은 ret 앞에 free()를 삽입하는 구조이므로 pass함.
@@ -205,16 +202,12 @@ void StringEncryptor::EncryptMarkStrings()
 			llvm::appendToCompilerUsed(*encryptGV->getParent(), { encryptGV });
 
 			// malloc 명령어 생성
-			Instruction* mallocInst = CallInst::CreateMalloc(
-				decryptBlock,
-				Int64Ty,
-				encryptConst->getType(),
-				ConstantExpr::getSizeOf(encryptConst->getType()),
-				nullptr,
-				nullptr);
+			llvm::Function* mallocFunc = llvm::cast<llvm::Function>(
+				mod->getOrInsertFunction("malloc", llvm::FunctionType::get(Int8PtrTy, { Int64Ty }, false)).getCallee());
+			llvm::Value* sizeValue = llvm::ConstantInt::get(Int64Ty, strSize);
 
 			// malloc 실행 후 주소 할당 받음
-			Value* allocatedMemory = builderDecryptBlock.Insert(mallocInst);
+			llvm::Value* allocatedMemory = builderDecryptBlock.CreateCall(mallocFunc, { sizeValue });
 
 			// 로컬 변수에 저장
 			AllocaInst* ai = builderDecryptBlock.CreateAlloca(Int64Ty);
@@ -275,8 +268,8 @@ void StringEncryptor::EncryptMarkStrings()
 			}
 
 			// free 명령어 생성
-			Instruction* freeInst = CallInst::CreateFree(li, freeBlock);
-			builderFreeBlock.Insert(freeInst);
+			llvm::Function* freeFunc = llvm::cast<llvm::Function>(mod->getOrInsertFunction("free", llvm::FunctionType::get(llvm::Type::getVoidTy(*moduleContext), { Int8PtrTy }, false)).getCallee());
+			builderFreeBlock.CreateCall(freeFunc, { li });
 
 		}
 		builderFreeBlock.CreateBr(B);

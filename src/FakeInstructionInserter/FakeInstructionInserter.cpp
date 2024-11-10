@@ -4,7 +4,7 @@
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
 #include "Common/LLVMType.hpp"
 #include "Common/Util.hpp"
 

@@ -1,5 +1,5 @@
 ﻿#include "DynamicCallConverter.hpp"
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Demangle/Demangle.h"

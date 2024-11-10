@@ -37,11 +37,11 @@ static void initFunction(LLVMContext* moduleContext)
 {
 	instance->voidTy = Type::getVoidTy(*moduleContext);
 	instance->int8Ty = Type::getInt8Ty(*moduleContext);
-	instance->int8PtrTy = Type::getInt8PtrTy(*moduleContext);
+	instance->int8PtrTy = instance->int8Ty->getPointerTo();
 	instance->int32Ty = Type::getInt32Ty(*moduleContext);
-	instance->int32PtrTy = Type::getInt32PtrTy(*moduleContext);
+	instance->int32PtrTy = instance->int32Ty->getPointerTo();
 	instance->int64Ty = Type::getInt64Ty(*moduleContext);
-	instance->int64PtrTy = Type::getInt64PtrTy(*moduleContext);
+	instance->int64PtrTy = instance->int64Ty->getPointerTo();
 }
 
 static Type* getVoidTyFunction()

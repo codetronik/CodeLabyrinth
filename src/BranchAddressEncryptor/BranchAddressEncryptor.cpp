@@ -1,5 +1,5 @@
 ﻿#include "BranchAddressEncryptor.hpp"
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"

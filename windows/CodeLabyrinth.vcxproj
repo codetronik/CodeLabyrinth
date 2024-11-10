@@ -54,7 +54,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>LLVMCore.lib;LLVMSupport.lib;LLVMBinaryFormat.lib;LLVMRemarks.lib;LLVMBitstreamReader.lib;LLVMTargetParser.lib;LLVMDemangle.lib;LLVMTransformUtils.lib;LLVMProfileData.lib;LLVMAnalysis.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>LLVMCore.lib;LLVMSupport.lib;LLVMBinaryFormat.lib;LLVMRemarks.lib;LLVMBitstreamReader.lib;LLVMTargetParser.lib;LLVMDemangle.lib;LLVMTransformUtils.lib;LLVMProfileData.lib;LLVMAnalysis.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
