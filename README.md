@@ -24,7 +24,7 @@ $ make -j16
 
 ### Xcode's Clang option
 Project Setting -> Apple Clang -> Custom Compiler Flags -> Other C Flags -> Release  
-> -fno-legacy-pass-manager -fpass-plugin=/libCodeLabyrinth.dylib -DCMAKE_OSX_ARCHITECTURES=arm64
+> -fpass-plugin=/libCodeLabyrinth.dylib -DCMAKE_OSX_ARCHITECTURES=arm64
 
 ## Build for Android (on Windows)
 
